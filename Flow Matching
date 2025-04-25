@@ -1,0 +1,229 @@
+#import os
+#os.kill(os.getpid(), 9)
+
+import numpy as np
+import torch
+import torch.optim as optim
+import torch.nn as nn
+import matplotlib.pyplot as plt
+import random as rd
+
+
+N = 2000
+theta  = 2*np.pi*torch.rand(N)-np.pi
+
+rs = np.sin(theta)
+rc = np.cos(theta)
+
+x = torch.stack((rs,rc),dim=0) # Target Distribution on the circle
+x = 0.3*torch.randn(2,N)+1
+x1 = 0.3 * torch.randn(2, int(N/2)) + 2
+x2 = 0.3 * torch.randn(2, int(N/2)) - 2
+
+# Concatenate along the second dimension
+x = torch.cat((x1, x2), dim=1)
+
+
+xn = 0.1*torch.randn(2,N) # Initial Noise distribution : Gaussian Distribution
+
+yn = 0.1*torch.randn(2,N)
+
+dt = 0.005
+t = torch.arange(0,1,dt)
+
+plt.plot(x[0,:],x[1,:],'s')
+
+plt.plot(xn[0,:],xn[1,:],'o')
+
+
+xt = xn[:,:,None]+(x[:,:,None]-xn[:,:,None])*t # Generating straightline trajectories  x(t,x0,x1) =
+
+ep = 0.01
+
+
+vo = (x[:,:,None]-xn[:,:,None])*(torch.ones(len(t))) # Collection Velocities v(t,x0,x1) = x1-x0
+
+###!!! should't there by 1/dt for the velocity?
+
+vt = vo
+
+plt.figure()
+
+
+xc=xn.detach().numpy()
+vp=vt.detach().numpy()
+
+plt.quiver(xt[0,:,0], xt[1,:,0], vp[0,:,0], vp[1,:,0])
+
+tims = torch.ones(N,len(t))*t
+
+data = torch.cat([xt,tims[None,:,:]],dim=0)
+
+data = torch.reshape(data,(3,-1))
+vt = torch.reshape(vt,(2,-1))
+
+data = data.t()
+vt = vt.t()
+
+
+
+
+
+input_dim = 3
+
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class Net(nn.Module):
+
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(3, 10)
+        self.fc2 = nn.Linear(10, 10)
+        self.fc3 = nn.Linear(10, 2)
+        self.relu = nn.ReLU()
+
+
+    def forward(self, x):
+        # Max pooling over a (2, 2) window
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.fc3(x)
+        return x
+
+
+net = Net()
+print(net)
+
+# create your optimizer
+optimizer = optim.SGD(net.parameters(), lr=0.1)
+mse = nn.MSELoss()
+
+n_epochs = 5000
+
+
+for step in range(n_epochs):
+
+    optimizer.zero_grad()
+
+    op = net(data)
+
+    output = torch.norm(op-vt)**2/N/len(t)
+
+
+# |NN(data) - vt|^2
+
+
+     # Compute the gradients
+    output.backward()
+
+    # Update the parameter
+    optimizer.step()
+
+    # Zero the gradients
+    optimizer.zero_grad()
+
+    # Print the current value of x
+    print(output)
+
+
+
+
+# Testing the Training
+
+N_test = 1000
+
+xn_test = 0.1*torch.randn(N_test,2)
+
+x_test_traj = torch.zeros(N_test,len(t),2)
+
+tims = torch.ones(N_test,len(t))*t
+x_test_traj[:,0,:] = xn_test
+
+xa_test = torch.cat([x_test_traj,tims[:,:,None]],dim=2)
+
+
+
+theta  = 2*np.pi*torch.rand(N,1)-np.pi
+tim =torch.ones(N,1)
+
+rs = np.sin(theta)
+rc = np.cos(theta)
+
+tim_3 = 0.5
+
+
+
+#test_x= torch.stack((rs,rc,tim),dim=1)
+test_x= xa_test[:,0,:]
+test_v = net(torch.squeeze(xa_test[:,0,:]))
+
+
+r = net(torch.tensor((xa_test[:,0,:])))
+
+
+for i in range(len(t)-1):
+
+ xa_test[:,i+1,0:2]=xa_test[:,i,0:2] + dt*net(xa_test[:,i,:])
+
+
+xa_test= xa_test.detach().numpy()
+
+plt.plot(xn_test[:,0],xn_test[:,1],'s')
+
+plt.plot(xa_test[:,len(t)-1,0],xa_test[:,len(t)-1,1],'.')
+
+
+
+test_v = test_v.detach().numpy()
+test_x = test_x.detach().numpy()
+
+
+plt.figure()
+
+#plt.quiver(rs.detach().numpy(),rc.detach().numpy(),test_v[:,0],test_v[:,1],color='g')
+
+
+plt.quiver(test_x[:,0], test_x[:,1],test_v[:,0],test_v[:,1])
+
+
+
+
+#from scipy.integrate import odeint
+
+
+
+
+#t = np.linspace(0, 1, 101)
+
+#def pend(y, t):
+
+
+  #  arg = np.concatenate((y,np.array([t])),axis=0)
+
+ #   arg = torch.from_numpy(arg)
+#    arg = arg.to(torch.float32)
+ #   dydt = net(arg)
+  #  dydt = dydt.detach().numpy()
+ #   return dydt
+
+#N_test = 500
+#xn_test = 0.1*torch.randn(N_test,2)
+#solend = np.zeros((N_test,2))
+
+#for i in range(N_test):
+
+#  sol = odeint(pend, xn_test[i,:], t)
+ # solend[i,:]= sol[len(t)-1,:]
+
+#plt.plot(xn_test[:,0],xn_test[:,1],'s')
+#plt.plot(solend[:,0],solend[:,1],'o')
+
+
+
+
